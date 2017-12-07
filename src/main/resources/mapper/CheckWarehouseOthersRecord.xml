@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.CheckWarehouseOthersRecordDao">
+	<resultMap type="scut.legend.cg.po.CheckWarehouseOthersRecord" id="checkWarehouseOthersRecordResultMap">
+		<id property="id" column="id"/>
+		<result property="checkNum" column="check_num"/>
+		<result property="checkDate" column="check_date"/>
+		<result property="blankInventory" column="blank_inventory"/>
+		<result property="semifinishedProductInventory" column="semifinished_product_inventory"/>
+		<result property="wasteInventory" column="waste_inventory"/>
+		<result property="leftoverInventory" column="leftover_inventory"/>
+		
+		<result property="staffId" column="staff_id"/>
+		<result property="staffName" column="staff_name"/>
+		
+		<association property="productModelInfo" column="product_model_info_id" 
+		javaType="scut.legend.cg.po.ProductModelInfo" 
+		select="selectProductModelById"></association>
+	</resultMap>
+	
+	<sql id="columnList">
+		check_num,check_date,blank_inventory,semifinished_product_inventory,waste_inventory,
+		leftover_inventory,staff_id,staff_name
+	</sql>
+	
+	<select id="selectProductModelById" resultType="scut.legend.cg.po.ProductModelInfo">
+		select product_model from product_model_info where id=#{id}
+	</select>
+	
+	<!-- 计数 -->
+	<select id="getDeliveryNumSuffix" resultType="java.lang.Integer">
+		select count(id) from check_warehouse_others_record
+		where check_date = #{0}
+	</select>
+	
+	<!-- 批量新增其他清仓登记记录 -->
+	<insert id="createMultiCheckWarehouseOthersRecord" parameterType="scut.legend.cg.po.CheckWarehouseOthersRecord" useGeneratedKeys="true" keyProperty="id">
+		insert into check_warehouse_others_record
+		(<include refid="columnList"></include>,product_model_info_id)
+		values
+		<foreach collection="list" item="item" index="index" separator=",">
+		(
+			#{item.checkNum},#{item.checkDate},#{item.blankInventory},#{item.semifinishedProductInventory},
+			#{item.wasteInventory},#{item.leftoverInventory},#{item.staffId},#{item.staffName},
+			(select id from product_model_info where product_model=#{item.productModelInfo.productModel})
+		)
+		</foreach>
+	</insert>
+	
+	<!-- 修改一条其他清仓记录,但checkNum、staffId、staffName不可更改 -->
+	<update id="updateOneCheckWarehouseOthersRecord" parameterType="scut.legend.cg.po.CheckWarehouseOthersRecord">
+		update check_warehouse_others_record
+		set
+		blank_inventory=#{blankInventory},semifinished_product_inventory=#{semifinishedProductInventory},
+		waste_inventory=#{wasteInventory},leftover_inventory=#{leftoverInventory},
+		product_model_info_id=(select id from product_model_info where product_model=#{productModelInfo.productModel})
+		where id=#{id}
+	</update>
+	
+		<!-- 获取所有其他清仓记录 
+	<select id="getAllCheckWarehouseOthersRecord" resultMap="checkWarehouseOthersRecordResultMap">
+		select * from check_warehouse_others_record
+	</select>
+	-->
+	<!--  根据条件获取其他清仓记录，起始时间和结束时间进行筛选 -->
+	<select id="getCheckWarehouseOthersRecordByDate" resultMap="checkWarehouseOthersRecordResultMap">
+		select * from check_warehouse_others_record where check_date between #{0} and #{1}
+		order by check_num DESC
+		limit #{2},#{3}
+	</select>
+	<!-- 根据起始时间和结束时间获取记录数目 -->
+	<select id="getCountByTime" resultType="java.lang.Integer">
+		select count(*) from check_warehouse_others_record 
+		where check_date between #{0} and #{1}
+	</select>
+	
+</mapper>

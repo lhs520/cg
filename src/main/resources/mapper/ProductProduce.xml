@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.ProductProduceDao">
+	<resultMap type="scut.legend.cg.po.ProductProduce" id="productProduceResultMap">
+		<id property="id" column="id"/>
+		<result property="produceNum" column="produce_num"/>
+		<result property="produceDate" column="produce_date"/>
+		<result property="produceQuantity" column="produce_quantity"/>
+		
+		<result property="staffId" column="staff_id"/>
+		<result property="staffName" column="staff_name"/>
+		
+		<association property="product" column="product_id" 
+		javaType="scut.legend.cg.po.Product" 
+		select="selectProductByProductId"></association>
+	</resultMap>
+	
+	<resultMap type="scut.legend.cg.po.Product" id="productMap">
+			<id property="productId" column="product_id"></id>
+			<result property="productShape" column="product_shape"></result>
+			<result property="productSize" column="product_size" />
+			
+			<association property="productModelInfo" column="product_model_info_id"
+				javaType="scut.legend.cg.po.ProductModelInfo" 
+				select="selectProductModelById">
+					<id property="id" column="id"/>
+					<result property="productModel" column="product_model"/>
+			</association>
+	</resultMap>
+	
+	<select id="selectProductModelById" resultType="scut.legend.cg.po.ProductModelInfo">
+		select product_model from product_model_info where id=#{id}
+	</select>
+	
+	<select id="selectProductByProductId" resultMap="productMap">
+		select * from product where product_id=#{product.productId}
+	</select>
+	
+	<sql id="columnList">
+		produce_num,produce_date,produce_quantity,staff_id,staff_name
+	</sql>
+	
+	<!-- 计数 -->
+	<select id="getDeliveryNumSuffix" resultType="java.lang.Integer">
+		select count(id) from product_produce
+		where produce_date = #{0}
+	</select>
+
+	<!--需要先查询product数据库表得到productId（如果不存在则向product数据库表插入一条新记录），然后 新增一条产品产出登记记录 -->
+	<insert id="createOneProductProduce" parameterType="scut.legend.cg.po.ProductProduce" useGeneratedKeys="true" keyProperty="id">
+		insert into product_produce
+		(<include refid="columnList"/>,product_id)
+		values(#{produceNum},#{produceDate},#{produceQuantity},#{staffId},#{staffName},
+				(select product_id from product where 
+											product_model_info_id=(select id from product_model_info where 
+																	product_model=#{product.productModelInfo.productModel})
+											and product_size=#{product.productSize}
+											and product_shape=#{product.productShape})
+		)
+	</insert>
+	
+	<!-- 修改一条产品产出记录,但produceNum、staffId、staffName不可更改 -->
+	<!-- 需要先查询product数据库表得到productId（如果不存在则向product数据库表插入一条新记录）,然后进行修改操作 -->
+	<update id="updateOneProductProduce" parameterType="scut.legend.cg.po.ProductProduce">
+		update product_produce
+		set
+		produce_quantity=#{produceQuantity},
+		product_id=(select product_id from product where 
+											product_model_info_id=(select id from product_model_info where 
+																	product_model=#{product.productModelInfo.productModel})
+											and product_size=#{product.productSize}
+											and product_shape=#{product.productShape})
+		where id=#{id}
+	</update>
+	
+	<!-- 获取所有产品产出记录 
+	<select id="getAllProductProduce" resultMap="productProduceResultMap">
+		select * from product_produce
+	</select>
+	-->
+	<!--  根据条件获取产品产出记录，起始时间和结束时间进行筛选 -->
+	<select id="getProductProduceByDate" resultMap="productProduceResultMap">
+		select * from product_produce where produce_date between #{0} and #{1}
+		order by produce_num DESC
+		limit #{2},#{3}
+	</select>
+	<!-- 根据起始时间和结束时间获取记录数目 -->
+	<select id="getCountByTime" resultType="java.lang.Integer">
+		select count(*) from product_produce 
+		where produce_date between #{0} and #{1}
+	</select>
+	
+	<!-- 根据id获取一条产品产出记录 -->
+	<select id="getProductProduceById" resultMap="productProduceResultMap">
+		select * from product_produce where id=#{0}
+	</select>
+	
+</mapper>

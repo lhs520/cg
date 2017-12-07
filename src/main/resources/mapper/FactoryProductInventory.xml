@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.FactoryProductInventoryDao">
+
+	<resultMap type="scut.legend.cg.po.FactoryProductInventory" id="factoryProductInventoryMap">
+		<id property="id" column="id"></id>
+		<result property="productInventory" column="product_inventory"/>
+		
+		<association property="product" column="product_id"
+			javaType="scut.legend.cg.po.Product" 
+			select="selectProductByProductId">
+		</association>
+		<!--
+		<association property="product" column="product_id"
+			javaType="scut.legend.cg.po.Product" 
+			select="selectProductByProductId">
+			<id property="productId" column="product_id"></id>
+			<result property="productShape" column="product_shape"></result>
+			<result property="productSize" column="product_size" />
+			
+			 下面这个association没有运行，原因未知？？？ 
+			<association property="productModelInfo" column="product_model_info_id"
+				javaType="scut.legend.cg.po.ProductModelInfo" 
+				select="selectProductModelById">
+					<id property="id" column="id"/>
+					<result property="productModel" column="product_model"/>
+			</association>
+		</association>
+		-->
+	</resultMap>
+	
+	<resultMap type="scut.legend.cg.po.Product" id="productMap">
+			<id property="productId" column="product_id"></id>
+			<result property="productShape" column="product_shape"></result>
+			<result property="productSize" column="product_size" />
+			
+			<association property="productModelInfo" column="product_model_info_id"
+				javaType="scut.legend.cg.po.ProductModelInfo" 
+				select="selectProductModelById">
+					<id property="id" column="id"/>
+					<result property="productModel" column="product_model"/>
+			</association>
+	</resultMap>
+	
+	<select id="selectProductModelById" resultType="scut.legend.cg.po.ProductModelInfo">
+		select product_model from product_model_info where id=#{id}
+	</select>
+	
+	<select id="selectProductByProductId" resultType="scut.legend.cg.po.Product" resultMap="productMap">
+		select * from product where product_id=#{product.productId}
+	</select>
+
+	<!-- 获得工厂 中所有产品库存
+	<select id="getAllProductInventory" resultMap="factoryProductInventoryMap">
+		select * from factory_product_inventory
+	</select>
+	 -->
+	<!--组合条件获取工厂产品库存 -->
+	<select id="getProductInventory" resultMap="factoryProductInventoryMap">
+		select * from factory_product_inventory as fpi inner join
+		(product as p inner join product_model_info as pmi on p.product_model_info_id=pmi.id)
+		on fpi.product_id=p.product_id
+		<where>
+			<if test="productModel != null">
+				pmi.product_model = #{productModel}
+			</if>
+			<if test="productSize != null">
+				and p.product_size = #{productSize}
+			</if>
+			<if test="productShape != null">
+				and p.product_shape = #{productShape}
+			</if>
+		</where>
+		limit ${offset},${pageNum}
+	</select>
+	<!--  根据产品型号、产品规格、产品形态  获取记录数目-->
+	<select id="getCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		select count(*) from factory_product_inventory as fpi inner join
+		(product as p inner join product_model_info as pmi on p.product_model_info_id=pmi.id)
+		on fpi.product_id=p.product_id
+		<where>
+			<if test="productModel != null">
+				pmi.product_model = #{productModel}
+			</if>
+			<if test="productSize != null">
+				and p.product_size = #{productSize}
+			</if>
+			<if test="productShape != null">
+				and p.product_shape = #{productShape}
+			</if>
+		</where>
+	</select>
+	
+	<!--新增一条工厂产品库存登记记录 -->
+	<insert id="createOneFactoryProductInventory" parameterType="scut.legend.cg.po.FactoryProductInventory" useGeneratedKeys="true" keyProperty="id">
+		insert into factory_product_inventory
+		(product_inventory,product_id)
+		values(#{productInventory},
+				(select product_id from product where 
+											product_model_info_id=(select id from product_model_info where 
+																	product_model=#{product.productModelInfo.productModel})
+											and product_size=#{product.productSize}
+											and product_shape=#{product.productShape})
+		)
+	</insert>
+	
+	<!-- 修改一条工厂产品库存记录 -->
+	<!-- DONE 需要先查询product数据库表得到productId（如果不存在则向product数据库表插入一条新记录）,然后进行修改操作 -->
+	<update id="updateOneFactoryProductInventory" parameterType="scut.legend.cg.po.FactoryProductInventory">
+		update factory_product_inventory
+		set
+		product_inventory=#{productInventory}
+		where id=#{id}
+	</update>
+	
+	<!-- 根据product_id获取一条工厂产品库存记录 -->
+	<select id="getOneFactoryProductInventoryByProductId" resultMap="factoryProductInventoryMap">
+		select * from factory_product_inventory where product_id=#{0}
+	</select>
+	
+</mapper>

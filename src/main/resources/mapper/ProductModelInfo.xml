@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.ProductModelInfoDao">
+	<resultMap type="scut.legend.cg.po.ProductModelInfo" id="productModelInfoResultMap">
+		<id property="id" column="id"/>
+		<result property="productModel" column="product_model"/>
+		<result property="addDate" column="add_date"/>
+		<result property="ratioAg" column="ratio_ag"/>
+		<result property="ratioCu" column="ratio_cu"/>
+		<result property="ratioZn" column="ratio_zn"/>
+		<result property="ratioCd" column="ratio_cd"/>
+		<result property="ratioSn" column="ratio_sn"/>
+		
+		<result property="staffId" column="staff_id"/>
+		<result property="staffName" column="staff_name"/>
+		
+	</resultMap>
+	
+	<sql id="columnList">
+		product_model,add_date,ratio_ag,ratio_cu,ratio_zn,ratio_cd,ratio_sn,staff_id,staff_name
+	</sql>
+
+	<!-- 新增一条产品型号添加记录 -->
+	<insert id="createOneProductModelInfo" parameterType="scut.legend.cg.po.ProductModelInfo" useGeneratedKeys="true" keyProperty="id">
+		insert into product_model_info
+		(<include refid="columnList"/>)
+		values(#{productModel},#{addDate},#{ratioAg},#{ratioCu},#{ratioZn},#{ratioCd},#{ratioSn},#{staffId},#{staffName})
+	</insert>
+	
+	<!-- 修改一条产品型号记录 -->
+	<update id="updateOneProductModelInfo" parameterType="scut.legend.cg.po.ProductModelInfo">
+		update product_model_info
+		set
+		product_model=#{productModel},ratio_ag=#{ratioAg},
+		ratio_cu=#{ratioCu},ratio_zn=#{ratioZn},ratio_cd=#{ratioCd},ratio_sn=#{ratioSn}
+		where id=#{id}
+	</update>
+	
+	<!-- 获取所有产品型号记录
+	<select id="getAllProductModelInfo" resultMap="productModelInfoResultMap">
+		select * from product_model_info
+	</select>
+	 -->
+	<!-- 根据条件获取产品型号记录，起始时间和结束时间进行筛选 -->
+	<select id="getProductModelInfoByDate" resultMap="productModelInfoResultMap">
+		select * from product_model_info where add_date between #{0} and #{1}
+		order by add_date DESC
+		limit #{2},#{3}
+	</select>
+	<!-- 根据起始时间和结束时间获取记录数目 -->
+	<select id="getCountByTime" resultType="java.lang.Integer">
+		select count(*) from product_model_info 
+		where add_date between #{0} and #{1}
+	</select>
+	
+	<select id="getAllProductModels" resultType="String">
+		select DISTINCT product_model from product_model_info order by product_model
+	</select>
+	
+</mapper>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.MaterialDao">
+	<resultMap type="scut.legend.cg.po.Material" id="MaterialMap">
+		<id property="materialId" column="material_id" />
+		<result property="materialClass" column="material_class" />
+		<result property="materialInventory" column="material_inventory" />
+	</resultMap>
+	
+	<resultMap type="scut.legend.cg.po.MaterialPurchaseRecord" id="MaterialPurchaseRecordMap">
+		<id property="id" column="id" />
+		<result property="staffId" column="staff_id" />
+		<result property="staffName" column="staff_name" />
+		<result property="purchaseNum" column="purchase_num" />
+		<result property="purchaseDate" column="purchase_date" />
+		<result property="purchaseQuantity" column="purchase_quantity" />
+		<result property="unitPrice" column="unit_price" />
+		<result property="totalPrice" column="total_price" />
+		<association property="material" javaType="scut.legend.cg.po.Material">
+			<id property="materialId" column="material_id" />
+			<result property="materialClass" column="material_class" />
+			<result property="materialInventory" column="material_inventory" />
+		</association>
+	</resultMap>
+	
+	<resultMap type="scut.legend.cg.vo.MaterialSum" id="MaterialSumMap">
+		<result property="materialId" column="material_id" />
+		<result property="materialClass" column="material_class" />
+		<result property="purchaseQuantitySum" column="purchase_quantity_sum" />
+		<result property="totalPriceSum" column="total_price_sum" />
+	</resultMap>
+	<!--  
+	<sql id="RecordColumnList">
+		
+	</sql>
+	-->
+	<select id="getNumberByDate" resultType="java.lang.Integer">
+		select count(id) from material_purchase_record
+		where purchase_date>=#{begin} and purchase_date&lt;=#{end}
+	</select>
+	
+	<insert id="createMateralPurchaseRecord" parameterType="scut.legend.cg.po.MaterialPurchaseRecord"
+		 useGeneratedKeys="true" keyProperty="id" >
+		insert into material_purchase_record
+		(staff_id,staff_name,purchase_num,purchase_date,purchase_quantity,unit_price,total_price,material_id)
+		values
+		(#{staffId},#{staffName},#{purchaseNum},#{purchaseDate},#{purchaseQuantity},#{unitPrice},#{totalPrice},#{material.materialId})
+	</insert>
+	
+	<update id="updateMaterialInventory">
+		update material set material_inventory=material_inventory+#{purchaseQuantity}
+		where material_id=#{materialId}
+	</update>
+	
+	<select id="getRecordById" resultMap="MaterialPurchaseRecordMap">
+		select * from material_purchase_record where id=#{id}
+	</select>
+	
+	<update id="updateMateralPurchaseRecord">
+		update material_purchase_record
+		<set>
+			<if test="id!=null">
+				id=#{id},
+			</if>
+			<if test="material!=null and material.materialId!=null">
+				material_id=#{material.materialId},
+			</if>
+			<if test="purchaseQuantity!=null">
+				purchase_quantity=#{purchaseQuantity},
+			</if>
+			<if test="unitPrice!=null">
+				unit_price=#{unitPrice},
+			</if>
+			<if test="totalPrice!=null">
+				total_price=#{totalPrice}
+			</if>
+		</set>
+		where id=#{id}
+	</update>
+	
+	<select id="getInventoryByClass"  resultType="java.lang.Float">
+		select material_inventory from material where material_class=#{0}
+	</select>
+	
+	<update id="updateInventoryByClass">
+		update material set material_inventory=material_inventory-#{number}
+		where material_inventory>=#{number} and material_class=#{cls}
+	</update>
+	
+	<select id="getCountByTime" resultType="int">
+		select count(id) from material_purchase_record
+		<where>
+			<if test="startTime!=null">
+				purchase_date>=#{startTime}
+			</if>
+			<if test="endTime!=null">
+				and purchase_date&lt;=#{endTime}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getRecordsByTime" resultMap="MaterialPurchaseRecordMap">
+		select * from material_purchase_record
+		inner join material on material_purchase_record.material_id=material.material_id
+		<where>
+			<if test="startTime!=null">
+				purchase_date>=#{startTime}
+			</if>
+			<if test="endTime!=null">
+				and purchase_date&lt;=#{endTime}
+			</if>
+		</where>
+		limit #{begin},#{number}
+	</select>
+	
+	<select id="statisticMaterialRecords" resultMap="MaterialSumMap">
+		select material.material_id material_id,material_class,sum(purchase_quantity) purchase_quantity_sum,sum(total_price) total_price_sum
+		from material_purchase_record inner join material on material_purchase_record.material_id=material.material_id
+		where purchase_date>=#{startTime}
+		and purchase_date&lt;=#{endTime}
+		group by material_id
+	</select>
+	
+	<select id="getMaterials" resultMap="MaterialMap">
+		select * from material
+	</select>
+</mapper>

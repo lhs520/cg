@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.FactoryStatisticsDao">
+	<resultMap type="scut.legend.cg.po.FactoryStatistics" id="factoryStatisticsMap">
+		<result property="allProduceQuantity" column="all_produce_quantity"/>
+		<result property="allOutStorageQuantity" column="all_out_storage_quantity"/>
+		
+		<association property="product" column="product_id" 
+		javaType="scut.legend.cg.po.Product" 
+		select="selectProductByProductId"></association>
+	</resultMap>
+	
+	<resultMap type="scut.legend.cg.po.Product" id="productMap">
+			<id property="productId" column="product_id"></id>
+			<result property="productShape" column="product_shape"></result>
+			<result property="productSize" column="product_size" />
+			
+			<association property="productModelInfo" column="product_model_info_id"
+				javaType="scut.legend.cg.po.ProductModelInfo" 
+				select="selectProductModelById">
+					<id property="id" column="id"/>
+					<result property="productModel" column="product_model"/>
+			</association>
+	</resultMap>
+	
+	<select id="selectProductModelById" resultType="scut.legend.cg.po.ProductModelInfo">
+		select product_model from product_model_info where id=#{id}
+	</select>
+	
+	<select id="selectProductByProductId" resultMap="productMap">
+		select * from product where product_id=#{product.productId}
+	</select>
+	
+	<!-- TODO 根据条件获取开炉记录，起始时间和结束时间进行筛选 -->
+	<select id="getFactoryStatisticsByDate" resultMap="factoryStatisticsMap">
+		SELECT p.product_id as product_id,all_produce_quantity,all_out_storage_quantity
+		from 
+		product as p
+		LEFT JOIN
+		(select pp.product_id as p_product_id,SUM(produce_quantity) as all_produce_quantity
+		from product_produce as pp 
+		where produce_date between #{0} and #{1}
+		GROUP BY pp.product_id
+		) as t
+		on p.product_id=t.p_product_id
+		LEFT JOIN
+		(SELECT f.product_id as f_product_id,SUM(f.out_storage_quantity) as all_out_storage_quantity
+		from factory_out_storage_record as f 
+		where out_storage_date between #{0} and #{1}
+		GROUP BY f.product_id
+		) as w
+		on p.product_id=w.f_product_id
+		where all_produce_quantity>0 or all_out_storage_quantity>0
+
+		ORDER BY product_id
+		limit #{2},#{3}
+	</select>
+	<!-- 根据起始时间和结束时间获取记录数目 -->
+	<select id="getCountByTime" resultType="java.lang.Integer">
+		select count(p.product_id) 
+		from 
+		(product as p
+		LEFT JOIN
+		(select pp.product_id as p_product_id,SUM(produce_quantity) as all_produce_quantity
+		from product_produce as pp LEFT JOIN product as p1
+		on pp.product_id=p1.product_id
+		where produce_date between #{0} and #{1}
+		GROUP BY pp.product_id
+		) as t
+		on p.product_id=t.p_product_id
+		)
+		LEFT JOIN
+		(SELECT f.product_id as f_product_id,SUM(f.out_storage_quantity) as all_out_storage_quantity
+		from factory_out_storage_record as f LEFT JOIN product as p2
+		on f.product_id=p2.product_id
+		where out_storage_date between #{0} and #{1}
+		GROUP BY f.product_id
+		) as w
+		on p.product_id=w.f_product_id
+		where all_produce_quantity>0 or all_out_storage_quantity>0
+	</select>
+	
+	<select id="getTotalOutStorageQuantity" resultType="java.lang.Float">
+		select sum(out_storage_quantity) from factory_out_storage_record
+		<where>
+			<if test="beginTime!=null">
+				out_storage_date >= #{beginTime}
+			</if>
+			<if test="endTime!=null">
+				and out_storage_date &lt;= #{endTime}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getTotalProductQuantity" resultType="java.lang.Float">
+		select sum(produce_quantity) from product_produce
+		<where>
+			<if test="beginTime!=null">
+				produce_date >= #{beginTime}
+			</if>
+			<if test="endTime!=null">
+				and produce_date &lt;= #{endTime}
+			</if>
+		</where>
+	</select>
+	
+</mapper>

@@ -1,0 +1,277 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.WarehouseOrderDao">
+
+	<resultMap id="warehouseOrderMap" type="scut.legend.cg.po.WarehouseOrder">
+		<id property="id" column="id" />
+		<result property="orderNum" column="order_num" />
+		<result property="orderDate" column="order_date" />
+		<result property="deliveryQuantityTotal" column="delivery_quantity_total" />
+		<result property="deliveryQuantityNeed" column="delivery_quantity_need" />
+		<result property="unitPrice" column="unit_price" />
+		<result property="totalPrice" column="total_price" />
+		<result property="orderStatus" column="order_status" />
+		<result property="deliveryDate" column="delivery_date" />
+		<result property="warehouseManagerId" column="warehouse_manager_id" />
+		<result property="warehouseManagerName" column="warehouse_manager_name" />
+		<result property="staffName" column="staff_name" />
+		<result property="staffId" column="staff_id" />
+		<association property="staff" column="staff_id" fetchType="lazy"
+			javaType="scut.legend.cg.po.Staff">
+			<id property="staffId" column="staff_id"></id>
+			<result property="staffName" column="staff_name" />
+		</association>
+		<association property="product" column="product_id"  fetchType="lazy"
+			javaType="scut.legend.cg.po.Product">
+			<id property="productId" column="product_id"></id>
+			<result property="productShape" column="product_shape"></result>
+			<result property="productSize" column="product_size" />
+			<association property="productModelInfo" column="product_model_info_id" fetchType="lazy"
+				javaType="scut.legend.cg.po.ProductModelInfo">
+				<id property="id" column="id"/>
+				<result property="productModel" column="product_model" />
+			</association>
+		</association>
+		<association property="customer" column="customer_id" fetchType="lazy"
+			javaType="scut.legend.cg.po.Customer">
+			<id property="customerId" column="customer_id" />
+			<result property="customerName" column="customer_name" />
+			<result property="customerPhone" column="customer_phone" />
+			<result property="customerAddress" column="customer_address" />
+		</association>	
+	</resultMap>
+
+	<insert id="createOrder" useGeneratedKeys="true" keyProperty="id" parameterType="WarehouseOrder">
+		insert warehouse_order
+		(order_num,staff_id,staff_name,product_id,customer_id,order_date,delivery_quantity_total,
+		delivery_quantity_need,unit_price,total_price,order_status,delivery_date,warehouse_manager_id,
+		warehouse_manager_name)
+		value 
+		(#{orderNum},#{staff.staffId},#{staffName},#{product.productId},#{customer.customerId},
+		#{orderDate},#{deliveryQuantityTotal},#{deliveryQuantityNeed},#{unitPrice},
+		#{totalPrice},#{orderStatus},#{deliveryDate},#{warehouseManagerId},#{warehouseManagerName})
+	</insert>
+	
+	<!-- 计数 -->
+	<select id="getWarehouseOrderNumSuffix" resultType="java.lang.Integer">
+		select count(id) from warehouse_order
+		where order_date between #{0} and #{1}
+	</select>
+	
+	<!-- 根据产品获取产品ID -->
+	<select id="getProductId" resultType="java.lang.Integer">
+		select product_id from product as p inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+		where product_model = #{product.productModelInfo.productModel}
+		and product_size = #{product.productSize}
+		and product_shape = #{product.productShape}
+	</select>
+	
+	<insert id="createCustomer" useGeneratedKeys="true" keyProperty="customerId" parameterType="scut.legend.cg.po.Customer">
+		insert into customer(customer_name,customer_phone,customer_address)
+		values(#{customerName},#{customerPhone},#{customerAddress})
+	</insert>
+	
+	<select id="getWarehouseOrderByOrderNum" parameterType="java.lang.String" resultMap="warehouseOrderMap">
+		select * from warehouse_order as wo
+			inner join staff on wo.staff_id = staff.staff_id
+			inner join product as p on wo.product_id=p.product_id 
+			inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+			inner join customer on customer.customer_id = wo.customer_id 
+		where order_num = #{0}
+	</select>
+	
+	<select id="getWarehouseOrderById" parameterType="java.lang.Integer" resultMap="warehouseOrderMap">
+		select * from warehouse_order as wo
+			inner join staff on wo.staff_id = staff.staff_id
+			inner join product as p on wo.product_id=p.product_id 
+			inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+			inner join customer on customer.customer_id = wo.customer_id 
+		where wo.id = #{0}
+	</select>
+	
+	<!-- 获得指定条件的记录数 -->
+	<select id="getCount" resultType="java.lang.Integer" parameterType="java.util.HashMap">
+		select count(wo.id) from warehouse_order as wo
+			inner join staff on wo.staff_id = staff.staff_id
+			inner join product as p on wo.product_id=p.product_id 
+			inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+			inner join customer on customer.customer_id = wo.customer_id
+		<where>
+			<if test="customerName != null">
+				customer_name like '%${customerName}%'
+			</if>
+			<if test="orderStatus != null">
+				and order_status = #{orderStatus}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getWarehouseOrder" resultMap="warehouseOrderMap" parameterType="java.util.HashMap">
+		select * from warehouse_order as wo
+			inner join staff on wo.staff_id = staff.staff_id
+			inner join product as p on wo.product_id=p.product_id 
+			inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+			inner join customer on customer.customer_id = wo.customer_id
+		<where>
+			<if test="customerName != null">
+				customer_name like '%${customerName}%'
+			</if>
+			<if test="orderStatus != null">
+				and order_status = #{orderStatus}
+			</if>
+		</where>
+		order by order_num DESC
+		limit ${offset},${pageNum}
+	</select>
+	
+	<!-- 获得指定时间段内的记录数 -->
+	<select id="getCountByTime" resultType="java.lang.Integer">
+		select count(id) from warehouse_order
+		where order_date between #{0} and #{1}
+	</select>
+	
+	<select id="getWarehouseOrderByTime" resultMap="warehouseOrderMap">
+		select * from warehouse_order as wo
+			inner join staff on wo.staff_id = staff.staff_id
+			inner join product as p on wo.product_id=p.product_id 
+			inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+			inner join customer on customer.customer_id = wo.customer_id
+		where order_date between #{0} and #{1}
+		order by order_num DESC
+		limit #{2},#{3}
+	</select>
+	
+	<!-- 更新订单需配送量 -->
+	<update id="updateOrderDeliveryNeed">
+		update warehouse_order
+		set delivery_quantity_need = #{1}
+		where id = #{0}
+	</update>
+	
+	<!-- 更新订单状态 -->
+	<update id="updateOrderStatus">
+		update warehouse_order
+		set order_status = #{1}
+		where id = #{0}
+	</update>
+	
+	<!-- 修改订单 -->
+	<update id="updateOrder" parameterType="scut.legend.cg.po.WarehouseOrder">
+		update warehouse_order
+		<set>
+			<if test="deliveryQuantityTotal != null">
+				delivery_quantity_total = #{deliveryQuantityTotal},
+			</if>
+			<if test="deliveryQuantityNeed !=null">
+				delivery_quantity_need = #{deliveryQuantityNeed},
+			</if>
+			<if test="unitPrice != null">
+				unit_price = #{unitPrice},
+			</if>
+			<if test="totalPrice != null">
+				total_price = #{totalPrice},
+			</if>
+			<if test="product.productId != null">
+				product_id = #{product.productId},
+			</if>
+			<if test="customer.customerId != null">
+				customer_id = #{customer.customerId},
+			</if>
+			<if test="warehouseManagerId != null">
+				warehouse_manager_id = #{warehouseManagerId},
+				warehouse_manager_name = #{warehouseManagerName},
+			</if>
+			<if test="deliveryDate != null">
+				delivery_date = #{deliveryDate}
+			</if>		
+		</set>
+		where id=#{id}
+	</update>
+	
+	<!-- 计数全部条件集合20170701 -->
+	<select id="getWarehouseOrdersCount" resultType="java.lang.Integer">
+		select count(wo.id) from warehouse_order as wo
+			inner join staff on wo.staff_id = staff.staff_id
+			inner join product as p on wo.product_id=p.product_id 
+			inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+			inner join customer on customer.customer_id = wo.customer_id
+		<where>
+			<if test="orderNum!=null">
+				order_num like '%${orderNum}%'
+			</if>
+			<if test="customerName != null">
+				and customer_name like '%${customerName}%'
+			</if>
+			<if test="orderStatus != null">
+				and order_status = #{orderStatus}
+			</if>
+			<if test="true">
+				and order_date between #{beginTime} and #{endTime}
+			</if>
+		</where>
+	</select>
+	
+	<!-- 全部条件集合20170701 -->
+	<select id="getWarehouseOrders" resultMap="warehouseOrderMap">
+		select * from warehouse_order as wo
+			inner join staff on wo.staff_id = staff.staff_id
+			inner join product as p on wo.product_id=p.product_id 
+			inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+			inner join customer on customer.customer_id = wo.customer_id
+		<where>
+			<if test="orderNum != null">
+				order_num like '%${orderNum}%'
+			</if>
+			<if test="customerName != null">
+				and customer_name like '%${customerName}%'
+			</if>
+			<if test="orderStatus != null">
+				and order_status = #{orderStatus}
+			</if>
+			<if test="true">
+				and order_date between #{beginTime} and #{endTime}
+			</if>
+		</where>
+		order by order_num DESC
+		limit #{offset},#{pageNum}
+	</select>
+	
+	<!-- 20170705 获取所有状态为未配送或者部分配送的订单 -->
+	<select id="getWarehouseOrderToDelivery" parameterType="java.lang.Integer" resultMap="warehouseOrderMap">
+		select * from warehouse_order as wo
+			inner join staff on wo.staff_id = staff.staff_id
+			inner join product as p on wo.product_id=p.product_id 
+			inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+			inner join customer on customer.customer_id = wo.customer_id
+		<where>
+			<if test="true">
+				(order_status="未配送" or order_status="部分配送")
+			</if>
+			<if test="warehouseManagerId != null">
+				and warehouse_manager_id = #{warehouseManagerId}
+			</if>
+		</where>
+		order by order_num
+	</select>
+	
+	<!-- TODO 临时 -->
+	<select id="getCustomerId" resultType="java.lang.Integer">
+		select customer_id from customer
+		where customer_name = #{0}
+			and customer_address = #{1}
+			and customer_phone = #{2}
+	</select>
+	
+	<select id="getTotalPrice" resultType="java.lang.Float">
+		select sum(total_price) from warehouse_order
+		<where>
+			<if test="beginTime!=null">
+				order_date >= #{beginTime}
+			</if>
+			<if test="endTime!=null">
+				and order_date &lt;= #{endTime}
+			</if>
+		</where>
+	</select>
+</mapper>

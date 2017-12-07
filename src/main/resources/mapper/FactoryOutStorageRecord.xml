@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.FactoryOutStorageRecordDao">
+	<resultMap type="scut.legend.cg.po.FactoryOutStorageRecord" id="factoryOutStorageRecordResultMap">
+		<id property="id" column="id"/>
+		<result property="outStorageNum" column="out_storage_num"/>
+		<result property="outStorageDate" column="out_storage_date"/>
+		<result property="outStorageQuantity" column="out_storage_quantity"/>
+		
+		<result property="staffId" column="staff_id"/>
+		<result property="staffName" column="staff_name"/>
+		
+		<association property="product" column="product_id" 
+		javaType="scut.legend.cg.po.Product" 
+		select="selectProductByProductId"></association>
+	</resultMap>
+	
+	<resultMap type="scut.legend.cg.po.Product" id="productMap">
+			<id property="productId" column="product_id"></id>
+			<result property="productShape" column="product_shape"></result>
+			<result property="productSize" column="product_size" />
+			
+			<association property="productModelInfo" column="product_model_info_id"
+				javaType="scut.legend.cg.po.ProductModelInfo" 
+				select="selectProductModelById">
+					<id property="id" column="id"/>
+					<result property="productModel" column="product_model"/>
+			</association>
+	</resultMap>
+	
+	<select id="selectProductModelById" resultType="scut.legend.cg.po.ProductModelInfo">
+		select product_model from product_model_info where id=#{id}
+	</select>
+	
+	<select id="selectProductByProductId" resultType="scut.legend.cg.po.Product" resultMap="productMap">
+		select * from product where product_id=#{product.productId}
+	</select>
+	
+	<sql id="columnList">
+		out_storage_num,out_storage_date,out_storage_quantity,staff_id,staff_name
+	</sql>
+	
+	<!-- 计数 -->
+	<select id="getDeliveryNumSuffix" resultType="java.lang.Integer">
+		select count(id) from factory_out_storage_record
+		where out_storage_date = #{0}
+	</select>
+
+	<!-- 新增一条工厂出库记录 -->
+	<insert id="createOneFactoryOutStorageRecord" parameterType="scut.legend.cg.po.FactoryOutStorageRecord" useGeneratedKeys="true" keyProperty="id">
+		insert into factory_out_storage_record
+		(<include refid="columnList"/>,product_id)
+		values(#{outStorageNum},#{outStorageDate},#{outStorageQuantity},#{staffId},#{staffName},
+		(select product_id from product where 
+											product_model_info_id=(select id from product_model_info where 
+																	product_model=#{product.productModelInfo.productModel})
+											and product_size=#{product.productSize}
+											and product_shape=#{product.productShape})
+		)
+	</insert>
+	
+	<!-- 修改一条工厂出库记录,但produceNum、staffId、staffName不可更改 -->
+	<update id="updateOneFactoryOutStorageRecord" parameterType="scut.legend.cg.po.FactoryOutStorageRecord">
+		update factory_out_storage_record
+		set
+		out_storage_quantity=#{outStorageQuantity},
+		product_id=(select product_id from product where 
+											product_model_info_id=(select id from product_model_info where 
+																	product_model=#{product.productModelInfo.productModel})
+											and product_size=#{product.productSize}
+											and product_shape=#{product.productShape})
+		where id=#{id}
+	</update>
+	
+	<!-- 获取所有工厂出库记录
+	<select id="getAllFactoryOutStorageRecord" resultMap="factoryOutStorageRecordResultMap">
+		select * from factory_out_storage_record
+	</select>
+	 -->
+	<!-- 根据条件获取工厂出库记录，起始时间和结束时间进行筛选 -->
+	<select id="getFactoryOutStorageRecordByDate" resultMap="factoryOutStorageRecordResultMap">
+		select * from factory_out_storage_record where out_storage_date between #{0} and #{1}
+		order by out_storage_num DESC
+		limit #{2},#{3}
+	</select>
+	<!-- 根据起始时间和结束时间获取记录数目 -->
+	<select id="getCountByTime" resultType="java.lang.Integer">
+		select count(*) from factory_out_storage_record 
+		where out_storage_date between #{0} and #{1}
+	</select>
+	
+	<!-- 根据id获取一条工厂出库记录 -->
+	<select id="getOneFactoryOutStorageRecordById" resultMap="factoryOutStorageRecordResultMap">
+		select * from factory_out_storage_record where id=#{0}
+	</select>
+	
+</mapper>

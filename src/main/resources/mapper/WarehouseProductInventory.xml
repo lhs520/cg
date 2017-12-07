@@ -1,0 +1,74 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.WarehouseProductInventoryDao">
+
+	<resultMap type="scut.legend.cg.po.WarehouseProductInventory" id="whpiMap">
+		<id property="id" column="id"></id>
+		<result property="productInventory" column="product_inventory"/>
+		<association property="product" column="product_id"  fetchType="lazy"
+			javaType="scut.legend.cg.po.Product">
+			<id property="productId" column="product_id"></id>
+			<result property="productShape" column="product_shape"></result>
+			<result property="productSize" column="product_size" />
+			<association property="productModelInfo" column="product_model_info_id" fetchType="lazy"
+				javaType="scut.legend.cg.po.ProductModelInfo">
+				<id property="id" column="id"/>
+				<result property="productModel" column="product_model" />
+			</association>
+		</association>
+	</resultMap>
+	
+	<!-- 条件获取产品库存 -->
+	<select id="getProductInventory"  parameterType="java.util.HashMap" resultMap="whpiMap">
+		select * from warehouse_product_inventory as wpi inner join
+		(product as p inner join product_model_info as pmi on p.product_model_info_id=pmi.id)
+		on wpi.product_id=p.product_id
+		<where>
+			<if test="productModel != null">
+				product_model = #{productModel}
+			</if>
+			<if test="productSize != null">
+				and product_size = #{productSize}
+			</if>
+			<if test="productShape != null">
+				and product_shape = #{productShape}
+			</if>
+		</where>
+		limit ${offset},${pageNum}
+	</select>
+	
+	<!-- 条件获取产品库存记录数 -->
+	<select id="getCount"  parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		select count(wpi.id) from warehouse_product_inventory as wpi inner join
+		(product as p inner join product_model_info as pmi on p.product_model_info_id=pmi.id)
+		on wpi.product_id=p.product_id
+		<where>
+			<if test="productModel != null">
+				product_model = #{productModel}
+			</if>
+			<if test="productSize != null">
+				and product_size = #{productSize}
+			</if>
+			<if test="productShape != null">
+				and product_shape = #{productShape}
+			</if>
+		</where>
+	</select>
+	
+	<select id="getproductInventoryByProduct" parameterType="Product" resultType="WarehouseProductInventory">
+		select * from warehouse_product_inventory where product_id=#{productId}
+	</select>
+	
+	<update id="updateproductInventory" parameterType="WarehouseProductInventory">
+		update warehouse_product_inventory set product_inventory=#{productInventory}
+		where product_id=#{product.productId}
+	</update>
+
+	
+	<insert id="createProductInventory" useGeneratedKeys="true" keyProperty="id" parameterType="WarehouseProductInventory">
+		insert warehouse_product_inventory (product_id,product_inventory)
+		value (#{product.productId},#{productInventory})
+	</insert>
+	
+</mapper>

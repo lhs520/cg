@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.CheckWarehouseProductRecordDao">
+	<resultMap type="scut.legend.cg.po.CheckWarehouseProductRecord" id="checkWarehouseProductRecordResultMap">
+		<id property="id" column="id"/>
+		<result property="checkNum" column="check_num"/>
+		<result property="checkDate" column="check_date"/>
+		<result property="productInventory" column="product_inventory"/>
+		
+		<result property="staffId" column="staff_id"/>
+		<result property="staffName" column="staff_name"/>
+		
+		<association property="product" column="product_id" 
+		javaType="scut.legend.cg.po.Product" 
+		select="selectProductByProductId"></association>
+	</resultMap>
+	
+	<resultMap type="scut.legend.cg.po.Product" id="productMap">
+			<id property="productId" column="product_id"></id>
+			<result property="productShape" column="product_shape"></result>
+			<result property="productSize" column="product_size" />
+			
+			<association property="productModelInfo" column="product_model_info_id"
+				javaType="scut.legend.cg.po.ProductModelInfo" 
+				select="selectProductModelById">
+					<id property="id" column="id"/>
+					<result property="productModel" column="product_model"/>
+			</association>
+	</resultMap>
+	
+	<select id="selectProductModelById" resultType="scut.legend.cg.po.ProductModelInfo">
+		select product_model from product_model_info where id=#{id}
+	</select>
+	
+	<select id="selectProductByProductId" resultType="scut.legend.cg.po.Product" resultMap="productMap">
+		select * from product where product_id=#{productId}
+	</select>
+	
+	<sql id="columnList">
+		check_num,check_date,product_inventory,staff_id,staff_name
+	</sql>
+	
+	<!-- 计数 -->
+	<select id="getDeliveryNumSuffix" resultType="java.lang.Integer">
+		select count(id) from check_warehouse_product_record
+		where check_date = #{0}
+	</select>
+	
+	<!-- 批量新增产品清仓登记记录 -->
+	<insert id="createMultiCheckWarehouseProductRecord" parameterType="scut.legend.cg.po.CheckWarehouseProductRecord" useGeneratedKeys="true" keyProperty="id">
+		insert into check_warehouse_product_record
+		(<include refid="columnList"></include>,product_id)
+		values
+		<foreach collection="list" item="item" index="index" separator=",">
+		(
+			#{item.checkNum},#{item.checkDate},#{item.productInventory},#{item.staffId},#{item.staffName},
+			(select product_id from product where 
+											product_model_info_id=(select id from product_model_info where 
+																	product_model=#{item.product.productModelInfo.productModel})
+											and product_size=#{item.product.productSize}
+											and product_shape=#{item.product.productShape})
+		)
+		</foreach>
+	</insert>
+	
+	<!-- 修改一条产品清仓记录,但checkNum、staffId、staffName不可更改 -->
+	<update id="updateOneCheckWarehouseProductRecord" parameterType="scut.legend.cg.po.CheckWarehouseProductRecord">
+		update check_warehouse_product_record
+		set
+		product_inventory=#{productInventory},
+		product_id=(select product_id from product where 
+											product_model_info_id=(select id from product_model_info where 
+																	product_model=#{product.productModelInfo.productModel})
+											and product_size=#{product.productSize}
+											and product_shape=#{product.productShape})
+		where id=#{id}
+	</update>
+	
+		<!-- 获取所有产品清仓记录
+	<select id="getAllCheckWarehouseProductRecord" resultMap="checkWarehouseProductRecordResultMap">
+		select * from check_warehouse_product_record
+	</select>
+	 -->
+	<!--  根据条件获取产品清仓记录，起始时间和结束时间进行筛选 -->
+	<select id="getCheckWarehouseProductRecordByDate" resultMap="checkWarehouseProductRecordResultMap">
+		select * from check_warehouse_product_record where check_date between #{0} and #{1}
+		order by check_num DESC
+		limit #{2},#{3}
+	</select>
+	<!-- 根据起始时间和结束时间获取记录数目 -->
+	<select id="getCountByTime" resultType="java.lang.Integer">
+		select count(*) from check_warehouse_product_record 
+		where check_date between #{0} and #{1}
+	</select>
+	
+</mapper>

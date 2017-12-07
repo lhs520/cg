@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.ProductDao">
+	<resultMap type="scut.legend.cg.po.Product" id="productResultMap">
+		<id property="productId" column="product_id"/>
+		<result property="productSize" column="product_size"/>
+		<result property="productShape" column="product_shape"/>
+		
+		<association property="productModelInfo" column="product_model_info_id" 
+		javaType="scut.legend.cg.po.ProductModelInfo" 
+		select="selectProductModelById">
+		</association>
+	</resultMap>
+	
+	<select id="selectProductModelById" resultType="scut.legend.cg.po.ProductModelInfo">
+		select product_model from product_model_info where id=#{id}
+	</select>
+	
+	<sql id="columnList">
+		product_size,product_shape
+	</sql>
+
+	<!-- 新增一条产品添加记录,对应新增一条产品产出记录 -->
+	<insert id="createOneProduct" parameterType="scut.legend.cg.po.Product" useGeneratedKeys="true" keyProperty="product_id">
+		insert into product
+		(<include refid="columnList"/>,product_model_info_id)
+		values(#{productSize},#{productShape},
+		(select id from product_model_info where product_model=#{productModelInfo.productModel}))
+	</insert>
+	
+	<!-- 修改一条产品记录,原则上是不能修改产品的，所有这一段代码无用
+	<update id="updateOneProduct" parameterType="scut.legend.cg.po.Product">
+		update product
+		set
+		product_model_info_id=(select id from product_model_info where product_model=#{productModelInfo.productModel}),
+		product_size=#{productSize},product_shape=#{productShape}
+		where product_id=#{productId}
+	</update>
+	 -->
+	<!-- 获取所有产品记录-->
+	<select id="getAllProduct" resultMap="productResultMap">
+		select * from product as p inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+		<where>
+			<if test="productModel != null">
+				pmi.product_model = #{productModel}
+			</if>
+			<if test="productSize != null">
+				and p.product_size = #{productSize}
+			</if>
+			<if test="productShape != null">
+				and p.product_shape = #{productShape}
+			</if>
+		</where>
+	</select>
+	 
+	<!-- 获取一条产品记录 ，根据产品型号、产品规格、产品形态，可返回null-->
+	<select id="getOneProduct" resultType="scut.legend.cg.po.Product">
+		select * from product where	product_model_info_id=(select id from product_model_info where product_model=#{0}) 
+		and product_size=#{1} and product_shape=#{2}
+	</select>
+	
+</mapper>

@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.StaffDao">
+	<resultMap type="scut.legend.cg.po.Staff" id="StaffMap">
+		<id property="staffId" column="staff_id" />
+		<result property="staffNum" column="staff_num" />
+		<result property="staffName" column="staff_name" />
+		<result property="staffState" column="staff_state" />
+		<result property="staffSex" column="staff_sex" />
+		<result property="staffNative" column="staff_native" />
+		<result property="staffNation" column="staff_nation" />
+		<result property="staffMarriage" column="staff_marriage" />
+		<result property="staffAddress" column="staff_address" />
+		<result property="staffEntryDate" column="staff_entry_date" />
+		<result property="staffIdNum" column="staff_id_num" />
+		<result property="staffTel" column="staff_tel" />
+		<result property="staffPassword" column="staff_password" />
+		
+		<association property="role" javaType="scut.legend.cg.po.Role" fetchType="lazy">
+			<id property="roleId" column="role_id" />
+			<result property="roleName" column="role_name" />
+			<result property="roleDescription" column="role_description" />
+		</association>
+	</resultMap>
+	
+	<sql id="columnList">
+		staff_num,staff_name,staff_state,staff_sex,staff_native,staff_nation,
+		staff_marriage,staff_address,staff_entry_date,staff_id_num,staff_tel,staff_password
+	</sql>
+	
+	<select id="getStaffByStaffNum" resultMap="StaffMap">
+		select * from staff inner join role on staff.role_id=role.role_id
+		where staff_num=#{0}
+	</select>
+	
+	<insert id="createStaff" parameterType="scut.legend.cg.po.Staff" useGeneratedKeys="true" keyProperty="staffId">
+		insert into staff
+		(<include refid="columnList" />,role_id)
+		values
+		(#{staffNum},#{staffName},#{staffState},#{staffSex},#{staffNative},#{staffNation},
+		#{staffMarriage},#{staffAddress},#{staffEntryDate},#{staffIdNum},#{staffTel},#{staffPassword},#{role.roleId})
+	</insert>
+
+	<select id="getStaffNumSuffix" resultType="java.lang.Integer">
+		select count(staff_id) from staff
+		where staff_entry_date >= #{0}
+	</select>
+	
+	<update id="update" parameterType="scut.legend.cg.po.Staff">
+		update staff
+		<set>
+			<if test="staffId!=null">
+				staff_id=#{staffId},
+			</if>
+			<!-- 
+			<if test="role!=null and role.roleId!=null ">
+				role_id=#{role.roleId},
+			</if>
+			 -->
+			<if test="staffState!=null">
+				staff_state=#{staffState},
+			</if>
+			<if test="staffSex!=null">
+				staff_sex=#{staffSex},
+			</if>
+			<if test="staffNative!=null">
+				staff_native=#{staffNative},
+			</if>
+			<if test="staffNation!=null">
+				staff_nation=#{staffNation},
+			</if>
+			<if test="staffMarriage!=null">
+				staff_marriage=#{staffMarriage},
+			</if>
+			<if test="staffAddress!=null">
+				staff_address=#{staffAddress},
+			</if>
+			<if test="staffTel!=null">
+				staff_tel=#{staffTel},
+			</if>
+			<if test="staffPassword!=null">
+				staff_password=#{staffPassword}
+			</if>
+		</set>
+		where staff_id=#{staffId}
+	</update>
+	
+	<select id="getStaffById" resultMap="StaffMap">
+		select * from staff inner join role on staff.role_id=role.role_id
+		where staff_id=#{0}
+	</select>
+	
+	
+	<select id="searchCount" resultType="int">
+		select count(staff_id) from
+		(select staff_id from staff inner join role on staff.role_id=role.role_id
+		<where>
+			<if test="param!=null">
+				staff_num like "%"#{param}"%"
+			</if>
+			<if test="roleId!=null">
+				and staff.role_id=#{roleId}
+			</if>
+			<if test="state!=null">
+				and staff_state=#{state}
+			</if>
+			<if test="sex!=null">
+				and staff_sex=#{sex}
+			</if>
+			<if test="marriage!=null">
+				and staff_marriage=#{marriage}
+			</if>
+			<if test="time!=null">
+				and staff_entry_date=#{time}
+			</if>
+		</where>
+		<if test="param!=null">
+				union
+				select staff_id from staff inner join role on staff.role_id=role.role_id
+			<where>
+				<if test="param!=null">
+					staff_name like "%"#{param}"%"
+				</if>
+				<if test="roleId!=null">
+					and staff.role_id=#{roleId}
+				</if>
+				<if test="state!=null">
+					and staff_state=#{state}
+				</if>
+				<if test="sex!=null">
+					and staff_sex=#{sex}
+				</if>
+				<if test="marriage!=null">
+					and staff_marriage=#{marriage}
+				</if>
+				<if test="time!=null">
+					and staff_entry_date=#{time}
+				</if>
+			</where>
+		</if>) as a
+	</select>
+	
+	<select id="search" resultMap="StaffMap">
+		select * from staff inner join role on staff.role_id=role.role_id
+		<where>
+			<if test="param!=null">
+				staff_num like "%"#{param}"%"
+			</if>
+			<if test="roleId!=null">
+				and staff.role_id=#{roleId}
+			</if>
+			<if test="state!=null">
+				and staff_state=#{state}
+			</if>
+			<if test="sex!=null">
+				and staff_sex=#{sex}
+			</if>
+			<if test="marriage!=null">
+				and staff_marriage=#{marriage}
+			</if>
+			<if test="time!=null">
+				and staff_entry_date=#{time}
+			</if>
+		</where>
+		<if test="param!=null">
+				union
+				select * from staff inner join role on staff.role_id=role.role_id
+			<where>
+				<if test="param!=null">
+					staff_name like "%"#{param}"%"
+				</if>
+				<if test="roleId!=null">
+					and staff.role_id=#{roleId}
+				</if>
+				<if test="state!=null">
+					and staff_state=#{state}
+				</if>
+				<if test="sex!=null">
+				and staff_sex=#{sex}
+				</if>
+				<if test="marriage!=null">
+					and staff_marriage=#{marriage}
+				</if>
+				<if test="time!=null">
+					and staff_entry_date=#{time}
+				</if>
+			</where>
+		</if>
+		limit #{begin},#{number}
+	</select>
+	
+	<select id="getStaffsByRoleName" resultMap="StaffMap">
+		select * from staff inner join role on staff.role_id=role.role_id
+		where role.role_description=#{roleName}
+	</select>
+	
+	<select id="findPermissions" resultType="java.lang.String">
+		select permission_name from staff inner JOIN role_permission on staff.role_id=role_permission.role_id
+		inner join permission on role_permission.permission_id=permission.permission_id where staff_num=#{staffNum}
+	</select>
+</mapper>

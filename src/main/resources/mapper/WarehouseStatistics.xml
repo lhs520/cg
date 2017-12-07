@@ -1,0 +1,61 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.WarehouseStatisticsDao">
+	
+	<resultMap type="scut.legend.cg.po.WarehouseStatistics" id="statisticsMap">
+		<result property="productModel" column="product_model" />
+		<result property="productSize" column="product_size" />
+		<result property="productShape" column="product_shape" />
+		<result property="allInStorageQuantity" column="all_inStorage_quantity" />
+		<result property="allDeliveryQuantity" column="all_delivery_quantity" />
+	</resultMap>
+
+	<select id="getInStorageStatistics" resultMap="statisticsMap">
+		select wisr.product_id,product_model,product_size,product_shape,SUM(in_storage_quantity) as all_inStorage_quantity
+		from warehouse_in_storage_record as wisr
+			inner join product on wisr.product_id=product.product_id
+			inner join product_model_info on product.product_model_info_id = product_model_info.id
+		where in_storage_date between #{0} and #{1}
+		group BY wisr.product_id
+		order by wisr.product_id
+		limit #{2},#{3}
+	</select>
+	
+	
+	<select id="getAllStatistics" resultMap="statisticsMap">
+		select temp.product_id,product_model,product_size,product_shape,SUM(in_storage_quantity) as all_inStorage_quantity,all_delivery_quantity
+		from
+		(
+			select wpi.product_id,product_model,product_size,product_shape,SUM(delivery_quantity) as all_delivery_quantity
+			from warehouse_product_inventory as wpi
+			left join warehouse_order as wo ON wpi.product_id = wo.product_id
+			left join product on wpi.product_id=product.product_id
+			left join product_model_info on product.product_model_info_id = product_model_info.id
+			left join 
+				(select * from warehouse_delivery_record where delivery_date between #{0} and #{1})
+				 as wdr ON wo.id = wdr.warehouse_order_id
+			group by wpi.product_id
+		) as temp
+			left join 
+				(select * from warehouse_in_storage_record where in_storage_date between #{0} and #{1})
+				 as wisr ON temp.product_id = wisr.product_id
+		group by temp.product_id
+		order by temp.product_id
+		limit #{2},#{3}
+	</select>
+	
+	<select id="getAllStatisticsCount" resultType="java.lang.Integer">
+		select count(product_id) from warehouse_product_inventory
+	</select>
+	
+	<select id="getTotalInstorage" resultType="java.lang.Float">
+		select sum(in_storage_quantity) from warehouse_in_storage_record
+		where in_storage_date between #{0} and #{1}
+	</select>
+	
+	<select id="getTotalDelivery" resultType="java.lang.Float">
+		select sum(delivery_quantity) from warehouse_delivery_record 
+		where delivery_date between #{0} and #{1}
+	</select>
+</mapper>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.CustomerDao">
+	<resultMap id="CustomerMap" type="scut.legend.cg.po.Customer">
+		<id property="customerId" column="customer_id" />
+		<result property="customerName" column="customer_name" />
+		<result property="customerPhone" column="customer_phone" />
+		<result property="customerAddress" column="customer_address" />
+	</resultMap>
+	
+	<sql id="columnList">
+		customer_name,customer_phone,customer_address
+	</sql>
+	
+	<select id="getCustomers" resultMap="CustomerMap">
+		select * from customer 
+		<if test="name!=null">
+			where customer_name like CONCAT('%',#{name},'%')
+		</if>
+		limit #{begin},#{number}
+	</select>
+	
+	<insert id="create" parameterType="scut.legend.cg.po.Customer">
+		insert into customer(<include refid="columnList" />)
+		values(#{customerName},#{customerPhone},#{customerAddress})
+	</insert>
+	
+	<select id="getCountByName" resultType="int" parameterType="String">
+		select count(customer_id) from customer
+		<!-- _parameter不能弄成name -->
+		<if test="name!=null">
+			where customer_name like CONCAT('%',#{name},'%')
+		</if>
+	</select>
+
+</mapper>

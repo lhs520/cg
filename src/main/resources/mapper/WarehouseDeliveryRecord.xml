@@ -1,0 +1,110 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.WarehouseDeliveryRecordDao">
+
+	<resultMap type="scut.legend.cg.po.WarehouseDeliveryRecord" id="whdrMap">
+		<id property="id" column="id" />
+		<result property="deliveryNum" column="delivery_num" />
+		<result property="deliveryDate" column="delivery_date" />
+		<result property="deliveryQuantity" column="delivery_quantity" />
+		<result property="staffId" column="staff_id"/>
+		<result property="staffName" column="staff_name"/>
+		<association property="staff" column="staff_id" fetchType="lazy"
+			javaType="scut.legend.cg.po.Staff">
+			<id property="staffId" column="staff_id"></id>
+			<result property="staffName" column="staff_name" />
+		</association>
+		<association property="warehouseOrder" column="warehouse_order_id" fetchType="lazy"
+			javaType="scut.legend.cg.po.WarehouseOrder">
+			<id property="id" column="warehouse_order_id" />
+			<result property="orderNum" column="order_num" />
+			<result property="deliveryQuantityNeed" column="delivery_quantity_need"/> 
+			<result property="deliveryQuantityTotal" column="delivery_quantity_total" />
+			<association property="product" column="product_id"  fetchType="lazy"
+				javaType="scut.legend.cg.po.Product">
+				<id property="productId" column="product_id"></id>
+				<result property="productShape" column="product_shape"></result>
+				<result property="productSize" column="product_size" />
+				<association property="productModelInfo" column="product_model_info_id" fetchType="lazy"
+					javaType="scut.legend.cg.po.ProductModelInfo">
+					<id property="id" column="id"/>
+					<result property="productModel" column="product_model" />
+				</association>
+			</association>
+			<association property="customer" column="customer_id" fetchType="lazy"
+				javaType="scut.legend.cg.po.Customer">
+				<id property="customerId" column="customer_id" />
+				<result property="customerName" column="customer_name" />
+				<result property="customerPhone" column="customer_phone"/>
+				<result property="customerAddress" column="customer_address"/>
+			</association>
+		</association>
+	</resultMap>
+
+	
+	<insert id="createWarehouseDeliveryRecord" useGeneratedKeys="true" keyProperty="id"
+		parameterType="scut.legend.cg.po.WarehouseDeliveryRecord">
+		insert into warehouse_delivery_record
+		(delivery_num,staff_id,staff_name,warehouse_order_id,delivery_date,delivery_quantity)
+		value (#{deliveryNum},#{staff.staffId},#{staff.staffName},#{warehouseOrder.id},
+		#{deliveryDate},#{deliveryQuantity})
+	</insert>
+	
+	<!-- 计数 -->
+	<select id="getDeliveryNumSuffix" resultType="java.lang.Integer">
+		select count(id) from warehouse_delivery_record
+		where delivery_date between #{0} and #{1}
+	</select>
+
+	<!-- 获得指定时间段内的记录数 -->
+	<select id="getCountByTime" resultType="java.lang.Integer">
+		select count(id) from warehouse_delivery_record
+		where delivery_date between #{0} and #{1}
+	</select>
+
+	<select id="getWarehouseDeliveryRecordByTime" resultMap="whdrMap">
+		select * from warehouse_delivery_record as wdr
+			inner join staff on wdr.staff_id = staff.staff_id
+			inner join warehouse_order as wo on wdr.warehouse_order_id = wo.id
+			inner join product as p on wo.product_id=p.product_id 
+			inner join product_model_info as pmi on p.product_model_info_id=pmi.id
+			inner join customer on wo.customer_id = customer.customer_id
+		where wdr.delivery_date between #{0} and #{1}
+		order by wdr.delivery_num DESC
+		limit #{2},#{3}
+	</select>
+	
+	
+	<select id="getWarehouseDeliveryRecordByNum" resultMap="whdrMap">
+		select * from warehouse_delivery_record as wdr
+			inner join staff on wdr.staff_id = staff.staff_id
+			inner join warehouse_order as wo on wdr.warehouse_order_id = wo.id
+			inner join customer on wo.customer_id = customer.customer_id
+		where delivery_num = #{0}
+	</select>
+	
+	<select id="getWarehouseDeliveryRecordById" resultMap="whdrMap">
+		select * from warehouse_delivery_record as wdr
+			inner join staff on wdr.staff_id = staff.staff_id
+			inner join warehouse_order as wo on wdr.warehouse_order_id = wo.id
+			inner join customer on wo.customer_id = customer.customer_id
+		where wdr.id= #{0}
+	</select>
+
+	<!-- 经理修改配送记录 -->
+	<update id="updateWarehouseDeliveryRecord" parameterType="scut.legend.cg.po.WarehouseDeliveryRecord">
+		update warehouse_delivery_record
+		<set>
+		<!--  
+			<if test="deliveryDate != null">
+				delivery_date = #{deliveryDate},
+			</if>-->
+			<if test="deliveryQuantity != null">
+				delivery_quantity = #{deliveryQuantity}
+			</if>
+		</set>
+		where id=#{id}
+	</update>
+
+</mapper>

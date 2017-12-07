@@ -1,0 +1,103 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.WarehouseInStorageRecordDao">
+
+	<resultMap type="scut.legend.cg.po.WarehouseInStorageRecord" id="wirMap">
+		<id property="id" column="id"></id>
+		<result property="inStorageNum" column="in_storage_num" />
+		<result property="inStorageDate" column="in_storage_date" />
+		<result property="inStorageQuantity" column="in_storage_quantity" />
+		<result property="staffName" column="staff_name" />
+		<result property="staffId" column="staff_id" />
+		<association property="staff" column="staff_id" fetchType="lazy"
+			javaType="scut.legend.cg.po.Staff">
+			<id property="staffId" column="staff_id"></id>
+			<result property="staffName" column="staff_name" />
+		</association>
+		<association property="product" column="product_id"  fetchType="lazy"
+			javaType="scut.legend.cg.po.Product">
+			<id property="productId" column="product_id"></id>
+			<result property="productShape" column="product_shape"></result>
+			<result property="productSize" column="product_size" />
+			<association property="productModelInfo" column="product_model_info_id" fetchType="lazy"
+				javaType="scut.legend.cg.po.ProductModelInfo">
+				<id property="id" column="id"/>
+				<result property="productModel" column="product_model" />
+			</association>
+		</association>
+	</resultMap>
+	
+	<!-- 创建新入库记录 -->
+	<insert id="createWarehouseInStorageRecord" useGeneratedKeys="true" keyProperty="id" parameterType="WarehouseInStorageRecord">
+		insert into warehouse_in_storage_record (in_storage_num,staff_id,staff_name,product_id,in_storage_date,in_storage_quantity)
+		value (#{inStorageNum},#{staff.staffId},#{staffName},#{product.productId},#{inStorageDate},#{inStorageQuantity})
+	</insert>
+	
+	<!-- 经理修改入库记录 -->
+	<update id="updateWarehouseInStorageRecord" parameterType="scut.legend.cg.po.WarehouseInStorageRecord">
+		update warehouse_in_storage_record
+		<set>
+			<!--  
+			<if test="inStorageDate != null">
+				in_storage_date = #{inStorageDate},
+			</if>-->
+			<if test="inStorageQuantity != null">
+				in_storage_quantity = #{inStorageQuantity},
+			</if>
+			<if test="product.productId != null">
+				product_id = #{product.productId}
+			</if>
+		</set>
+		where id=#{id}
+	</update>
+	
+	<!-- 根据时间筛选入库信息 -->
+	<select id="getWarehouseInStorageRecordByTime" resultMap="wirMap">
+		select * from warehouse_in_storage_record as wisr 
+			inner join
+			(product as p inner join product_model_info as pmi on p.product_model_info_id=pmi.id)
+			on wisr.product_id=p.product_id
+		where in_storage_date between #{0} and #{1}
+		order by in_storage_num DESC
+		limit #{2},#{3}
+	</select>
+	
+	<!-- 获取指定时间内共有多少条记录 -->
+	<select id="getCountByTime" resultType="java.lang.Integer">
+		select count(id) from warehouse_in_storage_record
+		where in_storage_date between #{0} and #{1}
+	</select>
+
+	<select id="getWarehouseInStorageRecordByInStorageNum" resultMap="wirMap">
+		select * from warehouse_in_storage_record as wisr inner join
+		(product as p inner join product_model_info as pmi on p.product_model_info_id=pmi.id)
+		on wisr.product_id=p.product_id
+		where in_storage_num = #{InStorageNum}
+	</select>
+	
+	<select id="getWarehouseInStorageRecordById" resultMap="wirMap">
+		select * from warehouse_in_storage_record as wisr inner join
+		(product as p inner join product_model_info as pmi on p.product_model_info_id=pmi.id)
+		on wisr.product_id=p.product_id
+		where wisr.id=#{0}
+	</select>
+
+	<!-- 计数 -->
+	<select id="getinStorageNumSuffix" resultType="java.lang.Integer">
+		select count(id) from warehouse_in_storage_record
+		where in_storage_date between #{0} and #{1}
+	</select>
+	
+	<!-- 根据产品获取产品ID -->
+	<select id="getProductId" resultType="java.lang.Integer">
+		select product_id from product as p 
+			inner join product_model_info as pmi
+			on p.product_model_info_id=pmi.id
+		where product_model = #{product.productModelInfo.productModel}
+		and product_size = #{product.productSize}
+		and product_shape = #{product.productShape}
+	</select>
+	
+	
+</mapper>

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper 
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scut.legend.cg.dao.BlowonRecordDao">
+	<resultMap type="scut.legend.cg.po.BlowonRecord" id="blowonRecordResultMap">
+		<id property="id" column="id"/>
+		<result property="blowonNum" column="blowon_num"/>
+		<result property="blowonDate" column="blowon_date"/>
+		<result property="consumeAg" column="consume_ag"/>
+		<result property="consumeCu" column="consume_cu"/>
+		<result property="consumeZn" column="consume_zn"/>
+		<result property="consumeCd" column="consume_cd"/>
+		<result property="consumeSn" column="consume_sn"/>
+		<result property="materialConsume" column="material_consume"/>
+		<result property="wasteConsume" column="waste_consume"/>
+		<result property="leftoverConsume" column="leftover_consume"/>
+		<result property="blankProduce" column="blank_produce"/>
+		<result property="lossRatio" column="loss_ratio"/>
+		
+		<result property="staffId" column="staff_id"/>
+		<result property="staffName" column="staff_name"/>
+		
+		<association property="productModelInfo" column="product_model_info_id" 
+		javaType="scut.legend.cg.po.ProductModelInfo" 
+		select="selectProductModelById">
+		</association>
+	</resultMap>
+	
+	<sql id="columnList">
+		blowon_num,blowon_date,consume_ag,consume_cu,consume_zn,consume_cd,consume_sn,
+		material_consume,waste_consume,leftover_consume,staff_id,staff_name,blank_produce,loss_ratio
+	</sql>
+	
+	<!-- 获取所有开炉记录
+	<select id="getAllBlowonRecord" resultMap="blowonRecordResultMap">
+		select * from blowon_record
+		order by blowon_date DESC
+		limit #{0},#{1}
+	</select>
+	 -->
+	<select id="selectProductModelById" resultType="scut.legend.cg.po.ProductModelInfo">
+		select product_model from product_model_info where id=#{id}
+	</select>
+	
+	<!-- TODO 根据条件获取开炉记录，起始时间和结束时间进行筛选 -->
+	<select id="getBlowonRecordByDate" resultMap="blowonRecordResultMap">
+		select * from blowon_record where blowon_date 
+		between #{0} and #{1}
+		order by blowon_num DESC
+		limit #{2},#{3}
+	</select>
+	<!-- 根据起始时间和结束时间获取记录数目 -->
+	<select id="getCountByTime" resultType="java.lang.Integer">
+		select count(*) from blowon_record 
+		where blowon_date between #{0} and #{1}
+	</select>
+	
+	<!-- 新增开炉登记记录 
+	<insert id="createMultiBlowonRecord" parameterType="scut.legend.cg.po.BlowonRecord" useGeneratedKeys="true" keyProperty="id">
+		insert into blowon_record
+		(<include refid="columnList"/>,product_model_info_id)
+		values(#{blowonNum},#{blowonDate},#{consumeAg},#{consumeCu},#{consumeZn},#{consumeCd},#{consumeSn},
+		#{materialConsume},#{wasteConsume},#{leftoverConsume},#{staffId},#{staffName},
+		(select id from product_model_info where product_model=#{productModelInfo.productModel}))
+	</insert >
+	-->
+	
+	<!-- 计数 -->
+	<select id="getDeliveryNumSuffix" resultType="java.lang.Integer">
+		select count(id) from blowon_record
+		where blowon_date = #{0}
+	</select>
+	
+	<!-- 批量新增开炉登记记录 -->
+	<insert id="createMultiBlowonRecord" parameterType="scut.legend.cg.po.BlowonRecord" useGeneratedKeys="true" keyProperty="id">
+		insert into blowon_record
+		(<include refid="columnList"/>,product_model_info_id)
+		values
+		<foreach collection="list" item="item" index="index" separator=",">
+		(
+			#{item.blowonNum},#{item.blowonDate},#{item.consumeAg},#{item.consumeCu},#{item.consumeZn},#{item.consumeCd},#{item.consumeSn},
+			#{item.materialConsume},#{item.wasteConsume},#{item.leftoverConsume},#{item.staffId},#{item.staffName},
+			#{item.blankProduce},#{item.lossRatio},
+			(select id from product_model_info where product_model=#{item.productModelInfo.productModel})
+		)
+		</foreach>
+	</insert>
+
+	<!-- 修改开炉记录,但blowonNum、staffId、staffName不可更改 -->
+	<update id="updateOneBlowonRecord" parameterType="scut.legend.cg.po.BlowonRecord">
+		update blowon_record
+		set
+		consume_ag=#{consumeAg},consume_cu=#{consumeCu},consume_zn=#{consumeZn},consume_cd=#{consumeCd},
+		consume_sn=#{consumeSn},material_consume=#{materialConsume},waste_consume=#{wasteConsume},leftover_consume=#{leftoverConsume},
+		blank_produce=#{blankProduce},loss_ratio=#{lossRatio},
+		product_model_info_id=(select id from product_model_info where product_model=#{productModelInfo.productModel})
+		where id=#{id}
+	</update>
+	
+	<!--  根据开炉id获取开炉记录 -->
+	<select id="getOneBlowonRecordById" resultMap="blowonRecordResultMap">
+		select * from blowon_record where id=#{id}
+	</select>
+	
+</mapper>
